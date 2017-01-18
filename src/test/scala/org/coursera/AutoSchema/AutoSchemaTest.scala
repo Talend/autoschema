@@ -57,7 +57,7 @@ case class TypeWithDescription(@Term.Description("Parameter description") param1
 
 class AutoSchemaTest extends AssertionsForJUnit {
   @Test
-  def justAnInt: Unit = {
+  def justAnInt(): Unit = {
     assert(createSchema[Int] ===
       Json.obj(
         "type" -> "number",
@@ -65,7 +65,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeOne: Unit = {
+  def typeOne(): Unit = {
     assert(createSchema[TypeOne] ===
       Json.obj(
         "title" -> "TypeOne",
@@ -78,7 +78,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeTwo: Unit = {
+  def typeTwo(): Unit = {
     assert(createSchema[TypeTwo] ===
       Json.obj(
         "title" -> "TypeTwo",
@@ -94,7 +94,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeThree: Unit = {
+  def typeThree(): Unit = {
     assert(createSchema[TypeThree] ===
       Json.obj(
         "title" -> "TypeThree",
@@ -114,7 +114,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeFour: Unit = {
+  def typeFour(): Unit = {
     assert(createSchema[TypeFour] ===
       Json.obj(
         "title" -> "TypeFour",
@@ -127,7 +127,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeFive: Unit = {
+  def typeFive(): Unit = {
     assert(createSchema[TypeFive] ===
       Json.obj(
         "title" -> "TypeFive",
@@ -141,7 +141,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeSix: Unit = {
+  def typeSix(): Unit = {
     assert(createSchema[TypeSix] ===
       Json.obj(
         "title" -> "TypeSix",
@@ -157,7 +157,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def typeSeven: Unit = {
+  def typeSeven(): Unit = {
     assert(createSchema[TypeSeven] ===
       Json.obj(
         "title" -> "TypeSeven",
@@ -170,7 +170,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def titledFields: Unit = {
+  def titledFields(): Unit = {
     assert(createSchema[TitledFields] ===
       Json.obj(
         "title" -> "TitledFields",
@@ -190,7 +190,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def orderedFields: Unit = {
+  def orderedFields(): Unit = {
     assert(createSchema[OrderedFields] ===
       Json.obj(
         "title" -> "OrderedFields",
@@ -212,7 +212,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def collections1: Unit = {
+  def collections1(): Unit = {
     assert(createSchema[Array[Int]] ===
       Json.obj(
         "type" -> "array",
@@ -222,7 +222,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def collections2: Unit = {
+  def collections2(): Unit = {
     assert(createSchema[List[Int]] ===
       Json.obj(
         "type" -> "array",
@@ -232,7 +232,7 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def collections3: Unit = {
+  def collections3(): Unit = {
     assert(createSchema[Seq[Int]] ===
       Json.obj(
         "type" -> "array",
@@ -242,21 +242,21 @@ class AutoSchemaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def recursiveType: Unit = {
+  def recursiveType(): Unit = {
     intercept[IllegalArgumentException] {
       createSchema[RecursiveType]
     }
   }
 
   @Test
-  def mutuallyRecursiveType: Unit = {
+  def mutuallyRecursiveType(): Unit = {
     intercept[IllegalArgumentException] {
       createSchema[MutuallyRecursiveTypeOne]
     }
   }
 
   @Test
-  def typeWithDescription: Unit = {
+  def typeWithDescription(): Unit = {
     assert(createSchema[TypeWithDescription] ===
       Json.obj(
         "title" -> "TypeWithDescription",

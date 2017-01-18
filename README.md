@@ -73,6 +73,16 @@ Lets you hide a value in generated schema
 
         case class MyType(@Term.Hide mySecretField: Int)
 
+### Title
+Lets you title a value in generated schema
+
+        case class MyType(@Term.Title("My Field Title") myField: Int)
+
+### Order
+Lets you order a value in generated schema, relatively to other values.
+
+        case class MyType(@Term.Order(2) myField1: Int, @Term.Order(1) myField2: Int)
+
 Copyright 2014 Coursera Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");

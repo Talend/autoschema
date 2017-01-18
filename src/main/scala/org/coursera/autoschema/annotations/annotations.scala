@@ -130,7 +130,11 @@ object Term {
   class Title(title: String) extends StaticAnnotation
 
   /**
-    * Orders the annotated field in the generated schema
+    * Orders the annotated field in the generated schema.
+    * It deals with a relative order compare to other fields. A field with a lower order will be up in the json schema.
+    * A field with a higher order will be down.
+    *
+    * @param order the relative order of the field
     * @example
     * {{{
     *      case class MyType(@Term.Order(2) myField1: Int, @Term.Order(1) myField2: Int)
