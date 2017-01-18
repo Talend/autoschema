@@ -64,8 +64,8 @@ class ExposeAs[T] extends StaticAnnotation
  *      @Description("This is a custom date")
  *      case class MyDateType
  * }}}
+ * @param description the class description
  *
- * @param desription
  * Optional: A description of the annotated field
  */
 class Description(description: String) extends StaticAnnotation
@@ -116,4 +116,30 @@ object Term {
    */
   @field
   type Description = annotations.Description@field
+
+  /**
+    * Titles the annotated field in the generated schema
+    *
+    * @param title the field title
+    * @example
+    * {{{
+    *      case class MyType(@Term.Title("My custom title") mySecretField: Int)
+    * }}}
+    */
+  @field
+  class Title(title: String) extends StaticAnnotation
+
+  /**
+    * Orders the annotated field in the generated schema.
+    * It deals with a relative order compare to other fields. A field with a lower order will be up in the json schema.
+    * A field with a higher order will be down.
+    *
+    * @param order the relative order of the field
+    * @example
+    * {{{
+    *      case class MyType(@Term.Order(2) myField1: Int, @Term.Order(1) myField2: Int)
+    * }}}
+    */
+  @field
+  class Order(order: Int) extends StaticAnnotation
 }
