@@ -32,7 +32,7 @@ abstract class AutoSchema {
   private[this] val isExposeAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.ExposeAs")
   private[this] val isTermExposeAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.ExposeAs")
   private[this] val isDescriptionAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Description")
-  private[this] val isTitleAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Title")
+  private[this] val isTitleAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Title")
   private[this] val isOrderAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Order")
 
   /**
@@ -174,6 +174,14 @@ abstract class AutoSchema {
     }
   }
 
+  private[this] def addTitle[T](tpe: ru.Type, obj: JsObject): JsObject = {
+    val title = tpe.typeSymbol.annotations.find(isTitleAnnotation).flatMap(titleAnnotationJson)
+    title match {
+      case Some(ttl) => obj + ttl
+      case None => obj
+    }
+  }
+
   private[this] def createSchema(tpe: ru.Type, previousTypes: Set[String]): JsObject = {
     val typeName = tpe.typeSymbol.fullName
 
@@ -192,11 +200,13 @@ abstract class AutoSchema {
         "enum" -> optionsArr
       )
       addDescription(tpe, enumJson)
+      addTitle(tpe, enumJson)
 
     } else if (typeName == "scala.Option") {
       // Option[T] becomes the schema of T with required set to false
       val jsonOption = createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes)
       addDescription(tpe, jsonOption)
+      addTitle(tpe, jsonOption)
     } else if (tpe.baseClasses.exists(s => s.fullName == "scala.collection.Traversable" ||
       s.fullName == "scala.Array" ||
       s.fullName == "scala.Seq" ||
@@ -205,6 +215,7 @@ abstract class AutoSchema {
       // (Traversable)[T] becomes a schema with items set to the schema of T
       val jsonSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
       addDescription(tpe, jsonSeq)
+      addTitle(tpe, jsonSeq)
     } else {
       val jsonObj = tpe.typeSymbol.annotations.find(isFormatAnnotation)
         .map(formatAnnotationJson)
@@ -227,6 +238,7 @@ abstract class AutoSchema {
             }
         }
       addDescription(tpe, jsonObj)
+      addTitle(tpe, jsonObj)
     }
   }
 

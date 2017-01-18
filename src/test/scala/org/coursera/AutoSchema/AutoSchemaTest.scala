@@ -43,7 +43,8 @@ case class TypeSix(param1: TypeSixParamOne, @Term.ExposeAs[Int] param2: TypeSixP
 
 case class TypeSeven(param1: UUID)
 
-case class TitledFields(@Term.Title("My Term Title") param1: String, param2: String)
+@Title("My Class Title")
+case class TitledType(@Term.Title("My Term Title") param1: String, param2: String)
 
 case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Order(1) param3: String)
 
@@ -171,9 +172,9 @@ class AutoSchemaTest extends AssertionsForJUnit {
 
   @Test
   def titledFields(): Unit = {
-    assert(createSchema[TitledFields] ===
+    assert(createSchema[TitledType] ===
       Json.obj(
-        "title" -> "TitledFields",
+        "title" -> "My Class Title",
         "type" -> "object",
         "required" -> Json.arr("param2", "param1"),
         "properties" -> Json.obj(

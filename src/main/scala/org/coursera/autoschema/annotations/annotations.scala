@@ -71,6 +71,18 @@ class ExposeAs[T] extends StaticAnnotation
 class Description(description: String) extends StaticAnnotation
 
 /**
+  * Lets you manually set a title to override the default
+  * @example
+  * {{{
+  *      @Title("Title")
+  *      case class MyDateType
+  * }}}
+  *
+  * @param title the class title
+  */
+class Title(title: String) extends StaticAnnotation
+
+/**
  * Contains AutoSchema annotations that can be used on fields (vals, vars, etc.)
  */
 // @field marks annotations as usable on fields
@@ -118,16 +130,15 @@ object Term {
   type Description = annotations.Description@field
 
   /**
-    * Titles the annotated field in the generated schema
+    * Same as [[annotations.Title]] but for fields
     *
-    * @param title the field title
     * @example
     * {{{
     *      case class MyType(@Term.Title("My custom title") mySecretField: Int)
     * }}}
     */
   @field
-  class Title(title: String) extends StaticAnnotation
+  type Title = annotations.Title@field
 
   /**
     * Orders the annotated field in the generated schema.
