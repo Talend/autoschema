@@ -17,15 +17,9 @@
 package org.coursera.AutoSchema
 
 import org.coursera.autoschema.AutoSchema.createSchema
-
-import org.coursera.autoschema.annotations.Description
-import org.coursera.autoschema.annotations.ExposeAs
-import org.coursera.autoschema.annotations.FormatAs
-import org.coursera.autoschema.annotations.Term
-
+import org.coursera.autoschema.annotations._
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
-
 import play.api.libs.json.Json
 import java.util.UUID
 
@@ -48,6 +42,10 @@ case class TypeSixParamTwo()
 case class TypeSix(param1: TypeSixParamOne, @Term.ExposeAs[Int] param2: TypeSixParamTwo)
 
 case class TypeSeven(param1: UUID)
+
+case class TitledFields(@Term.Title("My Term Title") param1: String, param2: String)
+
+case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Order(1) param3: String)
 
 case class RecursiveType(param1: RecursiveType)
 
@@ -169,6 +167,48 @@ class AutoSchemaTest extends AssertionsForJUnit {
           "param1" -> Json.obj(
             "type" -> "string",
             "pattern" -> "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"))))
+  }
+
+  @Test
+  def titledFields: Unit = {
+    assert(createSchema[TitledFields] ===
+      Json.obj(
+        "title" -> "TitledFields",
+        "type" -> "object",
+        "required" -> Json.arr("param2", "param1"),
+        "properties" -> Json.obj(
+          "param2" -> Json.obj(
+            "type" -> "string"
+          ),
+          "param1" -> Json.obj(
+            "type" -> "string",
+            "title" -> "My Term Title"
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def orderedFields: Unit = {
+    assert(createSchema[OrderedFields] ===
+      Json.obj(
+        "title" -> "OrderedFields",
+        "type" -> "object",
+        "required" -> Json.arr("param3", "param2", "param1"),
+        "properties" -> Json.obj(
+          "param2" -> Json.obj(
+            "type" -> "string"
+          ),
+          "param3" -> Json.obj(
+            "type" -> "string"
+          ),
+          "param1" -> Json.obj(
+            "type" -> "string"
+          )
+        )
+      )
+    )
   }
 
   @Test

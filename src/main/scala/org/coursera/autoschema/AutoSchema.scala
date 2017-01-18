@@ -1,18 +1,18 @@
 /**
- *  Copyright 2014 Coursera Inc.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+  * Copyright 2014 Coursera Inc.
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at
+  *
+  * http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
 
 package org.coursera.autoschema
 
@@ -21,25 +21,59 @@ import play.api.libs.json.Json
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 
-import scala.collection.mutable
 import scala.reflect.runtime.{universe => ru}
 
 abstract class AutoSchema {
   _: TypeMappings =>
 
   private[this] val classSchemaCache = collection.concurrent.TrieMap[String, JsObject]()
-
-  private def isOfType(annotation : ru.Annotation, tpe : String) = annotation.tree.tpe.typeSymbol.fullName == tpe
-
   private[this] val isHideAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Hide")
-
-  private[this] val isFormatAnnotation = (annotation: ru.Annotation) => isOfType(annotation,  "org.coursera.autoschema.annotations.FormatAs")
-
+  private[this] val isFormatAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.FormatAs")
   private[this] val isExposeAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.ExposeAs")
-
   private[this] val isTermExposeAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.ExposeAs")
-
   private[this] val isDescriptionAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Description")
+  private[this] val isTitleAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Title")
+  private[this] val isOrderAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Order")
+
+  /**
+    * Create schema based on reflection type
+    *
+    * @param tpe
+    * The reflection type to be converted into JSON Schema
+    * @return
+    * The JSON Schema for the type as a JsObject
+    */
+  def createSchema(tpe: ru.Type): JsObject = createSchema(tpe, Set.empty)
+
+  /**
+    *
+    * @tparam T
+    * The type to be converted into JSON Schema
+    * @return
+    * The JSON Schema for the type as a JsObject
+    */
+  def createSchema[T: ru.TypeTag]: JsObject = createSchema(ru.typeOf[T])
+
+  /**
+    * Create a schema and format it according to the style
+    *
+    * @param tpe    The reflection type to be converted into JSON Schema
+    * @param indent The left margin indent in pixels
+    * @return The JSON Schema for the type as a formatted string
+    */
+  def createPrettySchema(tpe: ru.Type, indent: Int) =
+    styleSchema(Json.prettyPrint(createSchema(tpe)), indent)
+
+  /**
+    * Create a schema and format it according to the style
+    *
+    * @param indent The left margin indent in pixels
+    * @return The JSON Schema for the type as a formatted string
+    */
+  def createPrettySchema[T: ru.TypeTag](indent: Int) =
+    styleSchema(Json.prettyPrint(createSchema(ru.typeOf[T])), indent)
+
+  private def isOfType(annotation: ru.Annotation, tpe: String) = annotation.tree.tpe.typeSymbol.fullName == tpe
 
   // Generates JSON schema based on a FormatAs annotation
   private[this] def formatAnnotationJson(annotation: ru.Annotation) = {
@@ -53,10 +87,25 @@ abstract class AutoSchema {
     }
   }
 
-  private [this] def descriptionAnnotationJson(annotation: ru.Annotation) = {
+  private[this] def descriptionAnnotationJson(annotation: ru.Annotation) = {
     annotation.tree.children.tail match {
       case description :: Nil =>
         Some("description" -> JsString(description.toString().tail.init))
+      case _ => None
+    }
+  }
+
+  private[this] def titleAnnotationJson(annotation: ru.Annotation) = {
+    annotation.tree.children.tail match {
+      case title :: Nil =>
+        Some("title" -> JsString(title.toString().tail.init))
+      case _ => None
+    }
+  }
+
+  private[this] def orderAnnotationInt(annotation: ru.Annotation) = {
+    annotation.tree.children.tail match {
+      case order :: Nil => Some(order.toString.toInt)
       case _ => None
     }
   }
@@ -73,23 +122,31 @@ abstract class AutoSchema {
             val termFormat = term.annotations.find(isFormatAnnotation)
               .map(formatAnnotationJson)
               .getOrElse {
-              term.annotations.find(isTermExposeAnnotation)
-                .map(annotation =>
-                createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
-                .getOrElse(createSchema(term.typeSignature, previousTypes + tpe.typeSymbol.fullName))
-            }
+                term.annotations.find(isTermExposeAnnotation)
+                  .map(annotation =>
+                    createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
+                  .getOrElse(createSchema(term.typeSignature, previousTypes + tpe.typeSymbol.fullName))
+              }
 
             //If it is not an `Option`, it is required.
-            if(term.typeSignature.typeSymbol.fullName != "scala.Option")
+            if (term.typeSignature.typeSymbol.fullName != "scala.Option")
               requiredValues = requiredValues ++ Seq(term.name.decodedName.toString.trim)
 
             val description = term.annotations.find(isDescriptionAnnotation).flatMap(descriptionAnnotationJson)
-            val termFormatWithDescription = description match  {
+            val termFormatWithDescription = description match {
               case Some(value) => termFormat + value
               case None => termFormat
             }
 
-            Some(term.name.decodedName.toString.trim -> termFormatWithDescription)
+            val title = term.annotations.find(isTitleAnnotation).flatMap(titleAnnotationJson)
+            val termFormatWithTitleAndDescription = title match {
+              case Some(value) => termFormatWithDescription + value
+              case None => termFormatWithDescription
+            }
+
+            val order = term.annotations.find(isOrderAnnotation).flatMap(orderAnnotationInt).getOrElse(0)
+
+            Some(order -> (term.name.decodedName.toString.trim -> termFormatWithTitleAndDescription))
           } else {
             None
           }
@@ -98,7 +155,7 @@ abstract class AutoSchema {
         }
       }.toList.sortBy(_._1)
 
-      val properties = JsObject(propertiesList)
+      val properties = JsObject(propertiesList.map(_._2))
 
       // Return the value and add it to the cache (since we're using getOrElseUpdate
       Json.obj("title" -> title, "type" -> "object", "required" -> JsArray(requiredValues.map(JsString)), "properties" -> properties)
@@ -141,10 +198,10 @@ abstract class AutoSchema {
       val jsonOption = createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes)
       addDescription(tpe, jsonOption)
     } else if (tpe.baseClasses.exists(s => s.fullName == "scala.collection.Traversable" ||
-                                           s.fullName == "scala.Array" ||
-                                           s.fullName == "scala.Seq" ||
-                                           s.fullName == "scala.List" ||
-                                           s.fullName == "scala.Vector")) {
+      s.fullName == "scala.Array" ||
+      s.fullName == "scala.Seq" ||
+      s.fullName == "scala.List" ||
+      s.fullName == "scala.Vector")) {
       // (Traversable)[T] becomes a schema with items set to the schema of T
       val jsonSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
       addDescription(tpe, jsonSeq)
@@ -152,80 +209,46 @@ abstract class AutoSchema {
       val jsonObj = tpe.typeSymbol.annotations.find(isFormatAnnotation)
         .map(formatAnnotationJson)
         .getOrElse {
-        tpe.typeSymbol.annotations.find(isExposeAnnotation)
-          .map(annotation => createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
-          .getOrElse {
-          schemaTypeForScala(typeName).getOrElse {
-            if (tpe.typeSymbol.isClass) {
-              // Check if this schema is recursive
-              if (previousTypes.contains(tpe.typeSymbol.fullName)) {
-                throw new IllegalArgumentException(s"Recursive types detected: $typeName")
-              }
+          tpe.typeSymbol.annotations.find(isExposeAnnotation)
+            .map(annotation => createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
+            .getOrElse {
+              schemaTypeForScala(typeName).getOrElse {
+                if (tpe.typeSymbol.isClass) {
+                  // Check if this schema is recursive
+                  if (previousTypes.contains(tpe.typeSymbol.fullName)) {
+                    throw new IllegalArgumentException(s"Recursive types detected: $typeName")
+                  }
 
-              createClassJson(tpe, previousTypes)
-            } else {
-              Json.obj()
+                  createClassJson(tpe, previousTypes)
+                } else {
+                  Json.obj()
+                }
+              }
             }
-          }
         }
-      }
       addDescription(tpe, jsonObj)
     }
   }
-
-  /**
-   * Create schema based on reflection type
-   * @param tpe
-   * The reflection type to be converted into JSON Schema
-   * @return
-   * The JSON Schema for the type as a JsObject
-   */
-  def createSchema(tpe: ru.Type): JsObject = createSchema(tpe, Set.empty)
-
-  /**
-   *
-   * @tparam T
-   * The type to be converted into JSON Schema
-   * @return
-   * The JSON Schema for the type as a JsObject
-   */
-  def createSchema[T: ru.TypeTag]: JsObject = createSchema(ru.typeOf[T])
-
-  /**
-   * Create a schema and format it according to the style
-   * @param tpe The reflection type to be converted into JSON Schema
-   * @param indent The left margin indent in pixels
-   * @return The JSON Schema for the type as a formatted string
-   */
-  def createPrettySchema(tpe: ru.Type, indent: Int) =
-    styleSchema(Json.prettyPrint(createSchema(tpe)), indent)
-
-  /**
-   * Create a schema and format it according to the style
-   * @param indent The left margin indent in pixels
-   * @return The JSON Schema for the type as a formatted string
-   */
-  def createPrettySchema[T: ru.TypeTag](indent: Int) =
-    styleSchema(Json.prettyPrint(createSchema(ru.typeOf[T])), indent)
 
   private[this] def styleSchema(schema: String, indent: Int) =
     s"""<div style="margin-left: ${indent}px; background-color: #E8E8E8; border-width: 1px;"><i>$schema</i></div>"""
 }
 
 /**
- * AutoSchema lets you take any Scala type and create JSON Schema out of it
- * @example
- * {{{
- *      // Pass the type as a type parameter
- *      case class MyType(...)
- *
- *      AutoSchema.createSchema[MyType]
- *
- *
- *      // Or pass the reflection type
- *      case class MyOtherType(...)
- *
- *      AutoSchema.createSchema(ru.typeOf[MyOtherType])
- * }}}
- */
+  * AutoSchema lets you take any Scala type and create JSON Schema out of it
+  *
+  * @example
+  * {{{
+  *      // Pass the type as a type parameter
+  *      case class MyType(...)
+  *
+  *      AutoSchema.createSchema[MyType]
+  *
+  *
+  *      // Or pass the reflection type
+  *      case class MyOtherType(...)
+  *
+  *      AutoSchema.createSchema(ru.typeOf[MyOtherType])
+  * }}}
+  */
 object AutoSchema extends AutoSchema with DefaultTypeMappings
