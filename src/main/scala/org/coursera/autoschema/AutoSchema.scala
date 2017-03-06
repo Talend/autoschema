@@ -226,7 +226,7 @@ abstract class AutoSchema {
 
     } else if (typeName == "scala.Option") {
       // Option[T] becomes the schema of T with required set to false
-      val jsonOption = createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes)
+      val jsonOption = createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, multiSelect)
       addDescription(tpe, jsonOption)
       addTitle(tpe, jsonOption)
     } else if (tpe.baseClasses.exists(s => s.fullName == "scala.collection.Traversable" ||
@@ -260,7 +260,7 @@ abstract class AutoSchema {
         .map(formatAnnotationJson)
         .getOrElse {
           tpe.typeSymbol.annotations.find(isExposeAnnotation)
-            .map(annotation => createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
+            .map(annotation => createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, multiSelect))
             .getOrElse {
               schemaTypeForScala(typeName).getOrElse {
                 if (tpe.typeSymbol.isClass) {

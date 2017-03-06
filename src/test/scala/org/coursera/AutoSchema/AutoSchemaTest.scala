@@ -50,6 +50,10 @@ case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Or
 
 case class MultiSelectFields(@Term.MultiSelect(uniqueItems = false, createIfNoneMatches = false) param1: Array[String])
 
+case class OptionalMultiSelectFields(@Term.MultiSelect(uniqueItems = false, createIfNoneMatches = false) param1: Option[Array[String]])
+
+case class ComplexTypeWithInnerMultiSelect(param1: String, msParam: Option[MultiSelectFields])
+
 case class RecursiveType(param1: RecursiveType)
 
 case class MutuallyRecursiveTypeOne(param1: MutuallyRecursiveTypeTwo)
@@ -230,6 +234,60 @@ class AutoSchemaTest extends AssertionsForJUnit {
             ),
             "uniqueItems" -> JsBoolean(false),
             "createIfNoneMatch" -> JsBoolean(false)
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def optionalMultiSelectFields(): Unit = {
+    assert(createSchema[OptionalMultiSelectFields] ===
+      Json.obj(
+        "title" -> "OptionalMultiSelectFields",
+        "type" -> "object",
+        "required" -> Json.arr(),
+        "properties" -> Json.obj(
+          "param1" -> Json.obj(
+            "type" -> "array",
+            "items" -> Json.obj(
+              "type" -> "string",
+              "enum" -> Json.arr()
+            ),
+            "uniqueItems" -> JsBoolean(false),
+            "createIfNoneMatch" -> JsBoolean(false)
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def complexTypeWithInnerMultiSelectFields(): Unit = {
+    assert(createSchema[ComplexTypeWithInnerMultiSelect] ===
+      Json.obj(
+        "title" -> "ComplexTypeWithInnerMultiSelect",
+        "type" -> "object",
+        "required" -> Json.arr("param1"),
+        "properties" -> Json.obj(
+          "msParam" -> Json.obj(
+            "title" -> "MultiSelectFields",
+            "type" -> "object",
+            "required" -> Json.arr("param1"),
+            "properties" -> Json.obj(
+              "param1" -> Json.obj(
+                "type" -> "array",
+                "items" -> Json.obj(
+                  "type" -> "string",
+                  "enum" -> Json.arr()
+                ),
+                "uniqueItems" -> JsBoolean(false),
+                "createIfNoneMatch" -> JsBoolean(false)
+              )
+            )
+          ),
+          "param1" -> Json.obj(
+            "type" -> "string"
           )
         )
       )
