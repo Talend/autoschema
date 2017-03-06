@@ -48,6 +48,8 @@ case class TitledType(@Term.Title("My Term Title") param1: String, param2: Strin
 
 case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Order(1) param3: String)
 
+case class MultiSelectFields(@Term.MultiSelect param1: Array[String])
+
 case class RecursiveType(param1: RecursiveType)
 
 case class MutuallyRecursiveTypeOne(param1: MutuallyRecursiveTypeTwo)
@@ -206,6 +208,26 @@ class AutoSchemaTest extends AssertionsForJUnit {
           ),
           "param1" -> Json.obj(
             "type" -> "string"
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def multiSelectFields(): Unit = {
+    assert(createSchema[MultiSelectFields] ===
+      Json.obj(
+        "title" -> "MultiSelectFields",
+        "type" -> "object",
+        "required" -> Json.arr("param1"),
+        "properties" -> Json.obj(
+          "param1" -> Json.obj(
+            "type" -> "array",
+            "items" -> Json.obj(
+              "type" -> "string",
+              "enum" -> Json.arr()
+            )
           )
         )
       )

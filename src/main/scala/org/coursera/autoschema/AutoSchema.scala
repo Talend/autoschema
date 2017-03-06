@@ -34,6 +34,7 @@ abstract class AutoSchema {
   private[this] val isDescriptionAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Description")
   private[this] val isTitleAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Title")
   private[this] val isOrderAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.Order")
+  private[this] val isMultiSelectAnnotation = (annotation: ru.Annotation) => isOfType(annotation, "org.coursera.autoschema.annotations.Term.MultiSelect")
 
   /**
     * Create schema based on reflection type
@@ -119,13 +120,14 @@ abstract class AutoSchema {
         if (member.isTerm) {
           val term = member.asTerm
           if ((term.isVal || term.isVar) && !term.annotations.exists(isHideAnnotation)) {
+            val termMultiSelect = term.annotations.exists(isMultiSelectAnnotation)
             val termFormat = term.annotations.find(isFormatAnnotation)
               .map(formatAnnotationJson)
               .getOrElse {
                 term.annotations.find(isTermExposeAnnotation)
                   .map(annotation =>
-                    createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
-                  .getOrElse(createSchema(term.typeSignature, previousTypes + tpe.typeSymbol.fullName))
+                    createSchema(annotation.tree.tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, termMultiSelect))
+                  .getOrElse(createSchema(term.typeSignature, previousTypes + tpe.typeSymbol.fullName, termMultiSelect))
               }
 
             //If it is not an `Option`, it is required.
@@ -182,10 +184,19 @@ abstract class AutoSchema {
     }
   }
 
-  private[this] def createSchema(tpe: ru.Type, previousTypes: Set[String]): JsObject = {
+  private[this] def createSchema(tpe: ru.Type, previousTypes: Set[String], multiSelect: Boolean = false): JsObject = {
     val typeName = tpe.typeSymbol.fullName
 
-    if (extendsValue(tpe)) {
+    if (false) {
+      val enumJson = Json.obj(
+        "type" -> "string",
+        "enum" -> JsArray()
+      )
+      addDescription(tpe, enumJson)
+      addTitle(tpe, enumJson)
+
+    }
+    else if (extendsValue(tpe)) {
       val mirror = ru.runtimeMirror(getClass.getClassLoader)
       val enumName = tpe.toString.split('.').init.mkString(".")
       val module = mirror.staticModule(enumName)
@@ -213,7 +224,7 @@ abstract class AutoSchema {
       s.fullName == "scala.List" ||
       s.fullName == "scala.Vector")) {
       // (Traversable)[T] becomes a schema with items set to the schema of T
-      val jsonSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes))
+      val jsonSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, multiSelect))
       addDescription(tpe, jsonSeq)
       addTitle(tpe, jsonSeq)
     } else {
