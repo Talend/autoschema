@@ -16,10 +16,8 @@
 
 package org.coursera.autoschema
 
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
+import org.coursera.autoschema.annotations.Term.MultiSelect
+import play.api.libs.json._
 
 import scala.reflect.runtime.{universe => ru}
 
@@ -106,7 +104,15 @@ abstract class AutoSchema {
 
   private[this] def orderAnnotationInt(annotation: ru.Annotation) = {
     annotation.tree.children.tail match {
-      case order :: Nil => Some(order.toString.toInt)
+      case order :: Nil => Some(order.toString().toInt)
+      case _ => None
+    }
+  }
+
+  private[this] def multiSelectAnnotation(annotation: ru.Annotation) = {
+    annotation.tree.children.tail match {
+      case uniqueItems :: createIfNoneMatches :: Nil =>
+        Some((uniqueItems.toString().toBoolean, createIfNoneMatches.toString().toBoolean))
       case _ => None
     }
   }
@@ -125,7 +131,7 @@ abstract class AutoSchema {
         if (member.isTerm) {
           val term = member.asTerm
           if ((term.isVal || term.isVar) && !term.annotations.exists(isHideAnnotation)) {
-            val termMultiSelect = term.annotations.exists(isMultiSelectAnnotation)
+            val termMultiSelect = term.annotations.find(isMultiSelectAnnotation).flatMap(multiSelectAnnotation)
             val termFormat = term.annotations.find(isFormatAnnotation)
               .map(formatAnnotationJson)
               .getOrElse {
@@ -198,19 +204,10 @@ abstract class AutoSchema {
     }
   }
 
-  private[this] def createSchema(tpe: ru.Type, previousTypes: Set[String], multiSelect: Boolean = false): JsObject = {
+  private[this] def createSchema(tpe: ru.Type, previousTypes: Set[String], multiSelect: Option[(Boolean, Boolean)] = None): JsObject = {
     val typeName = tpe.typeSymbol.fullName
 
-    if (false) {
-      val enumJson = Json.obj(
-        "type" -> "string",
-        "enum" -> JsArray()
-      )
-      addDescription(tpe, enumJson)
-      addTitle(tpe, enumJson)
-
-    }
-    else if (extendsValue(tpe)) {
+    if (extendsValue(tpe)) {
       val mirror = ru.runtimeMirror(getClass.getClassLoader)
       val enumName = tpe.toString.split('.').init.mkString(".")
       val module = mirror.staticModule(enumName)
@@ -237,10 +234,27 @@ abstract class AutoSchema {
       s.fullName == "scala.Seq" ||
       s.fullName == "scala.List" ||
       s.fullName == "scala.Vector")) {
+      val jsonArrSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, multiSelect))
       // (Traversable)[T] becomes a schema with items set to the schema of T
-      val jsonSeq = Json.obj("type" -> "array", "items" -> createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, previousTypes, multiSelect))
+      val jsonSeq = multiSelect match {
+          case Some((uniqueItems, createIfNoneMatches)) =>
+            jsonArrSeq ++ Json.obj(
+              "uniqueItems" -> JsBoolean(uniqueItems),
+              "createIfNoneMatch" -> JsBoolean(createIfNoneMatches)
+            )
+          case None =>
+            jsonArrSeq
+        }
       addDescription(tpe, jsonSeq)
       addTitle(tpe, jsonSeq)
+    } else if (multiSelect.isDefined) {
+      // enum values should come from an external service (`/tags` for instance)
+      val enumJson = Json.obj(
+        "type" -> "string",
+        "enum" -> JsArray()
+      )
+      addDescription(tpe, enumJson)
+      addTitle(tpe, enumJson)
     } else {
       val jsonObj = tpe.typeSymbol.annotations.find(isFormatAnnotation)
         .map(formatAnnotationJson)

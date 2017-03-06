@@ -20,7 +20,7 @@ import org.coursera.autoschema.AutoSchema.createSchema
 import org.coursera.autoschema.annotations._
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
-import play.api.libs.json.Json
+import play.api.libs.json.{JsBoolean, Json}
 import java.util.UUID
 
 case class TypeOne(param1: Int)
@@ -48,7 +48,7 @@ case class TitledType(@Term.Title("My Term Title") param1: String, param2: Strin
 
 case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Order(1) param3: String)
 
-case class MultiSelectFields(@Term.MultiSelect param1: Array[String])
+case class MultiSelectFields(@Term.MultiSelect(uniqueItems = false, createIfNoneMatches = false) param1: Array[String])
 
 case class RecursiveType(param1: RecursiveType)
 
@@ -227,7 +227,9 @@ class AutoSchemaTest extends AssertionsForJUnit {
             "items" -> Json.obj(
               "type" -> "string",
               "enum" -> Json.arr()
-            )
+            ),
+            "uniqueItems" -> JsBoolean(false),
+            "createIfNoneMatch" -> JsBoolean(false)
           )
         )
       )

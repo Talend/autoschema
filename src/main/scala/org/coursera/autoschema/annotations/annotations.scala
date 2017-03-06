@@ -163,7 +163,7 @@ object Term {
     * }}}
     */
   @field
-  class MultiSelect() extends StaticAnnotation
+  class MultiSelect(val uniqueItems: Boolean = true, val createIfNoneMatches: Boolean = true) extends StaticAnnotation
 
 
 }
