@@ -114,6 +114,11 @@ abstract class AutoSchema {
     // Check if schema for this class has already been generated
     classSchemaCache.getOrElseUpdate(tpe.typeSymbol.fullName, {
       val title = tpe.typeSymbol.name.decodedName.toString
+
+      val description : Option[(String, JsString)] = tpe.typeSymbol.annotations
+                                                        .find(isDescriptionAnnotation)
+                                                        .flatMap(descriptionAnnotationJson)
+
       var requiredValues = Seq[String]()
       val propertiesList = tpe.members.flatMap { member =>
         if (member.isTerm) {
@@ -158,7 +163,16 @@ abstract class AutoSchema {
       val properties = JsObject(propertiesList.map(_._2))
 
       // Return the value and add it to the cache (since we're using getOrElseUpdate
-      Json.obj("title" -> title, "type" -> "object", "required" -> JsArray(requiredValues.map(JsString)), "properties" -> properties)
+      val representation = Json.obj(
+        "title" -> title,
+        "type" -> "object",
+        "required" -> JsArray(requiredValues.map(JsString)),
+        "properties" -> properties)
+
+      description match {
+        case Some(descr) => representation + descr
+        case None => representation
+      }
     })
   }
 
