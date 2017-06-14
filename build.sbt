@@ -8,6 +8,8 @@ scalaVersion := "2.11.7"
 
 semanticVersion := Version(1, 0, 3)
 
+releaseSource := JavaProperty("release")
+
 scalacOptions ++= Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8")
 
 testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")
@@ -17,6 +19,10 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.1.7" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test"
 )
+
+artifact in (Compile, packageBin) ~= { art =>
+  art.copy(`classifier` = Some("talend"))
+}
 
 useGpg := true
 
