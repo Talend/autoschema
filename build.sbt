@@ -1,6 +1,6 @@
 lazy val root = (project in file(".")).enablePlugins(VersioningPlugin)
 
-name := "autoschema"
+name := "autoschema-talend"
 
 organization := "com.sauldhernandez"
 
@@ -19,10 +19,6 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.1.7" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test"
 )
-
-artifact in (Compile, packageBin) ~= { art =>
-  art.copy(`classifier` = Some("talend"))
-}
 
 useGpg := true
 
