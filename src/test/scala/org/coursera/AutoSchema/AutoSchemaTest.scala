@@ -20,7 +20,7 @@ import org.coursera.autoschema.AutoSchema.createSchema
 import org.coursera.autoschema.annotations._
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
-import play.api.libs.json.Json
+import play.api.libs.json.{JsBoolean, Json}
 import java.util.UUID
 
 case class TypeOne(param1: Int)
@@ -47,6 +47,12 @@ case class TypeSeven(param1: UUID)
 case class TitledType(@Term.Title("My Term Title") param1: String, param2: String)
 
 case class OrderedFields(@Term.Order(2) param1: String, param2: String, @Term.Order(1) param3: String)
+
+case class MultiSelectFields(@Term.MultiSelect(uniqueItems = false, createIfNoneMatches = false) param1: Array[String])
+
+case class OptionalMultiSelectFields(@Term.MultiSelect(uniqueItems = false, createIfNoneMatches = false) param1: Option[Array[String]])
+
+case class ComplexTypeWithInnerMultiSelect(param1: String, msParam: Option[MultiSelectFields])
 
 case class RecursiveType(param1: RecursiveType)
 
@@ -203,6 +209,82 @@ class AutoSchemaTest extends AssertionsForJUnit {
           ),
           "param3" -> Json.obj(
             "type" -> "string"
+          ),
+          "param1" -> Json.obj(
+            "type" -> "string"
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def multiSelectFields(): Unit = {
+    assert(createSchema[MultiSelectFields] ===
+      Json.obj(
+        "title" -> "MultiSelectFields",
+        "type" -> "object",
+        "required" -> Json.arr("param1"),
+        "properties" -> Json.obj(
+          "param1" -> Json.obj(
+            "type" -> "array",
+            "items" -> Json.obj(
+              "type" -> "string",
+              "enum" -> Json.arr()
+            ),
+            "uniqueItems" -> JsBoolean(false),
+            "createIfNoneMatch" -> JsBoolean(false)
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def optionalMultiSelectFields(): Unit = {
+    assert(createSchema[OptionalMultiSelectFields] ===
+      Json.obj(
+        "title" -> "OptionalMultiSelectFields",
+        "type" -> "object",
+        "required" -> Json.arr(),
+        "properties" -> Json.obj(
+          "param1" -> Json.obj(
+            "type" -> "array",
+            "items" -> Json.obj(
+              "type" -> "string",
+              "enum" -> Json.arr()
+            ),
+            "uniqueItems" -> JsBoolean(false),
+            "createIfNoneMatch" -> JsBoolean(false)
+          )
+        )
+      )
+    )
+  }
+
+  @Test
+  def complexTypeWithInnerMultiSelectFields(): Unit = {
+    assert(createSchema[ComplexTypeWithInnerMultiSelect] ===
+      Json.obj(
+        "title" -> "ComplexTypeWithInnerMultiSelect",
+        "type" -> "object",
+        "required" -> Json.arr("param1"),
+        "properties" -> Json.obj(
+          "msParam" -> Json.obj(
+            "title" -> "MultiSelectFields",
+            "type" -> "object",
+            "required" -> Json.arr("param1"),
+            "properties" -> Json.obj(
+              "param1" -> Json.obj(
+                "type" -> "array",
+                "items" -> Json.obj(
+                  "type" -> "string",
+                  "enum" -> Json.arr()
+                ),
+                "uniqueItems" -> JsBoolean(false),
+                "createIfNoneMatch" -> JsBoolean(false)
+              )
+            )
           ),
           "param1" -> Json.obj(
             "type" -> "string"

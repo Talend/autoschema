@@ -153,4 +153,17 @@ object Term {
     */
   @field
   class Order(order: Int) extends StaticAnnotation
+
+  /**
+    * Transform the annotated field into a json schema compatible with the use of multiselect tag input field
+    *
+    * @example
+    * {{{
+    *      case class MyType(@Term.MultiSelect myField1: Seq[String])
+    * }}}
+    */
+  @field
+  class MultiSelect(val uniqueItems: Boolean = true, val createIfNoneMatches: Boolean = true) extends StaticAnnotation
+
+
 }
